@@ -18,6 +18,12 @@
 | `金杯版列印示意圖_0.png` | Bambu Studio 切片畫面 |
 | `messageImage_*.jpg` | 市售彈性頭帶參考圖 |
 
-## 線上版本
+## 線上 3D 模擬
+
+直接開啟：https://lcqiann.github.io/ble-nhi-reader-system/
+
+（GitHub Pages 自 `index.html` 發佈，與 `藍牙健保卡讀卡系統_3D.html` 內容相同）
+
+## Claude 版本
 
 https://claude.ai/artifact/S5hW3s3kvN6sxsTNieaWWV
