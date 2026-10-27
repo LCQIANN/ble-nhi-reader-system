@@ -1,0 +1,591 @@
+<title>藍牙健保卡讀卡機</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: full-height 3D stage on the left, a scrolling control rail on the right; stacks on phones. */
+:root{
+  --bg:#e9ecf0; --surface:#ffffff; --fg:#1a1f26; --muted:#5f6974; --line:#d3d9e0;
+  --accent:#0a6ed1; --accent-soft:#dcebfa; --disc:#dfe3e8; --ok:#1f9d55; --tag:#1a1f26; --tag-fg:#ffffff;
+  --font-display:"Barlow Semi Condensed","Noto Sans TC",system-ui,sans-serif;
+  --font-body:"Noto Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171c; --surface:#1d2127; --fg:#e7eaee; --muted:#98a1ab; --line:#2c323a;
+    --accent:#5aa8ff; --accent-soft:#1a2d44; --disc:#1b1f25; --ok:#3ec47a; --tag:#e7eaee; --tag-fg:#14171c;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14171c; --surface:#1d2127; --fg:#e7eaee; --muted:#98a1ab; --line:#2c323a;
+  --accent:#5aa8ff; --accent-soft:#1a2d44; --disc:#1b1f25; --ok:#3ec47a; --tag:#e7eaee; --tag-fg:#14171c;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.5}
+.app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 340px;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:0}
+.stage{position:relative;min-width:0;min-height:0;overflow:hidden}
+.stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.stage canvas:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.hud{position:absolute;left:0;top:0;padding:18px 4px;pointer-events:none}
+.hud h1{margin:0;font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:.01em;line-height:1.1;text-wrap:balance}
+.hud p{margin:4px 0 0;color:var(--muted);font-size:12.5px;max-width:34ch}
+.hint{position:absolute;left:4px;bottom:14px;color:var(--muted);font-size:12px;pointer-events:none}
+.views{position:absolute;right:4px;top:18px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.views button{font:500 13px var(--font-body);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.views button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.tag{position:absolute;left:0;top:0;transform:translate(-50%,-100%);pointer-events:none;opacity:0;transition:opacity .25s;
+  display:flex;flex-direction:column;align-items:center;gap:0}
+.tag span{background:var(--tag);color:var(--tag-fg);font-size:12px;line-height:1.3;padding:4px 8px;border-radius:6px;white-space:nowrap;font-weight:500}
+.tag i{display:block;width:1px;height:22px;background:var(--tag)}
+.tag b{display:block;width:7px;height:7px;border-radius:50%;background:var(--tag);transform:translateY(50%)}
+.fallback{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+
+.rail{min-height:0;overflow:auto;background:var(--surface);border-left:1px solid var(--line);
+  padding-block:22px;padding-left:20px;padding-right:20px;display:flex;flex-direction:column;gap:22px}
+.rail h2{margin:0 0 10px;font-family:var(--font-display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rail section{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:500 13px var(--font-body);padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:focus-visible,.swatch:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.swatches{display:flex;gap:10px}
+.swatch{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0;position:relative}
+.swatch[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.spec{width:100%;border-collapse:collapse;font-size:13px}
+.spec td{padding:6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.spec td:first-child{color:var(--muted);width:38%}
+.spec td:last-child{font-variant-numeric:tabular-nums}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.map{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.map li{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:baseline}
+.map li em{font-style:normal;color:var(--muted)}
+.map li strong{font-weight:500}
+.led{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--ok)}
+
+@media (max-width:760px){
+  html,body{height:auto}
+  .app{height:auto;grid-template-columns:minmax(0,1fr)}
+  .stage{height:62vh;min-height:380px}
+  .rail{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-right:0}
+  .hud h1{font-size:20px}
+  .views{top:auto;bottom:12px;right:4px}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion: reduce){ .tag{transition:none} }
+</style>
+
+<div class="app">
+  <div class="stage" id="stage">
+    <canvas id="c" tabindex="0" aria-label="藍牙健保卡讀卡機 3D 模型，拖曳旋轉，滾輪縮放"></canvas>
+    <div class="hud">
+      <h1>藍牙健保卡讀卡機</h1>
+      <p>概念成品 3D 模擬，依麵包板原型（BLE 模組 + ISO 7816 介面 + 鋰電池）整合成單板隨身裝置。</p>
+    </div>
+    <div class="views" id="views" role="group" aria-label="視角">
+      <button type="button" data-view="iso" aria-pressed="true">等角</button>
+      <button type="button" data-view="front" aria-pressed="false">正面</button>
+      <button type="button" data-view="top" aria-pressed="false">俯視</button>
+      <button type="button" data-view="side" aria-pressed="false">側面</button>
+    </div>
+    <div class="hint">拖曳旋轉 · 滾輪或雙指縮放</div>
+    <div id="tags"></div>
+    <div class="fallback" id="fallback">這個瀏覽器無法啟用 WebGL，請改用桌面版 Chrome 或 Edge 開啟。</div>
+  </div>
+
+  <aside class="rail">
+    <section>
+      <h2>拆解檢視</h2>
+      <div class="row"><label for="explode">組裝 → 拆解</label><span id="explodeVal" style="font-variant-numeric:tabular-nums;color:var(--muted)">0%</span></div>
+      <input type="range" id="explode" min="0" max="100" value="0" step="1">
+      <p class="note">拉到右邊可看到上蓋、主板、電池與下蓋的層次，並顯示零件標籤。</p>
+    </section>
+
+    <section>
+      <h2>操作</h2>
+      <div class="btns">
+        <button type="button" class="btn" id="cardBtn" aria-pressed="true">健保卡：已插入</button>
+        <button type="button" class="btn" id="spinBtn" aria-pressed="true">自動旋轉</button>
+      </div>
+      <p class="note" id="ledNote"><span class="led" id="ledDot"></span>插卡後綠燈閃爍 2 秒表示讀取，之後常亮。藍燈慢閃為配對中。</p>
+    </section>
+
+    <section>
+      <h2>外殼顏色</h2>
+      <div class="swatches" id="swatches" role="group" aria-label="外殼顏色">
+        <button type="button" class="swatch" data-color="pearl" aria-pressed="true" aria-label="珍珠白" style="background:#f3f2ee"></button>
+        <button type="button" class="swatch" data-color="graphite" aria-pressed="false" aria-label="石墨灰" style="background:#3a3f46"></button>
+        <button type="button" class="swatch" data-color="mint" aria-pressed="false" aria-label="薄荷綠" style="background:#dfeee6"></button>
+        <button type="button" class="swatch" data-color="sky" aria-pressed="false" aria-label="淡藍" style="background:#dde9f5"></button>
+      </div>
+    </section>
+
+    <section>
+      <h2>規格（概念）</h2>
+      <table class="spec">
+        <tr><td>外型尺寸</td><td>100 × 66 × 14 mm</td></tr>
+        <tr><td>材質</td><td>PC+ABS 射出，上下蓋卡扣</td></tr>
+        <tr><td>卡片介面</td><td>ISO 7816 接觸式，推入式卡槽</td></tr>
+        <tr><td>無線</td><td>BLE 5.0（nRF52840 等級 SoC）</td></tr>
+        <tr><td>電池</td><td>LiPo 902030，500 mAh</td></tr>
+        <tr><td>原型耗電</td><td>26 mA（UT33A+ 實測）</td></tr>
+        <tr><td>估算續航</td><td>約 19 小時連續運作</td></tr>
+        <tr><td>充電 / 更新</td><td>USB-C 5 V，兼作韌體更新</td></tr>
+        <tr><td>指示燈</td><td>藍牙 / 讀卡 / 電量 三顆</td></tr>
+      </table>
+      <p class="note">續航以 500 mAh ÷ 26 mA 估算，量產時加入 BLE 休眠可再拉長。</p>
+    </section>
+
+    <section>
+      <h2>原型 → 成品對照</h2>
+      <ul class="map">
+        <li><em>USB-C 小板（BLE 模組）</em><strong>整合進主板，天線靠殼邊</strong></li>
+        <li><em>黑色開發板 + 跳線</em><strong>ISO 7816 介面電路與電平轉換</strong></li>
+        <li><em>USB 讀卡機卡槽</em><strong>板載推入式卡座，卡片露出 30 mm</strong></li>
+        <li><em>黃色 902030 鋰電池</em><strong>固定於主板後段，USB-C 充電</strong></li>
+        <li><em>麵包板量測線</em><strong>取消，改為板上測試點</strong></li>
+      </ul>
+    </section>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  var T = window.THREE;
+  var stage = document.getElementById('stage');
+  var canvas = document.getElementById('c');
+  var tagsEl = document.getElementById('tags');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var renderer;
+  try {
+    renderer = new T.WebGLRenderer({canvas: canvas, antialias: true});
+  } catch (e) {
+    document.getElementById('fallback').style.display = 'grid';
+    return;
+  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = T.sRGBEncoding;
+  renderer.toneMapping = T.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = T.PCFSoftShadowMap;
+  renderer.localClippingEnabled = true;
+
+  var scene = new T.Scene();
+  var camera = new T.PerspectiveCamera(32, 1, 1, 3000);
+
+  function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  /* ---------- helpers ---------- */
+  function roundedBoxGeo(w, h, d, r, bevel){
+    var s = new T.Shape();
+    var x = -w/2, y = -d/2;
+    s.moveTo(x + r, y);
+    s.lineTo(x + w - r, y);
+    s.quadraticCurveTo(x + w, y, x + w, y + r);
+    s.lineTo(x + w, y + d - r);
+    s.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+    s.lineTo(x + r, y + d);
+    s.quadraticCurveTo(x, y + d, x, y + d - r);
+    s.lineTo(x, y + r);
+    s.quadraticCurveTo(x, y, x + r, y);
+    var g = new T.ExtrudeGeometry(s, {
+      depth: Math.max(0.01, h - 2*bevel), bevelEnabled: bevel > 0,
+      bevelThickness: bevel, bevelSize: bevel, bevelSegments: 5, curveSegments: 14
+    });
+    g.rotateX(-Math.PI/2);
+    g.translate(0, bevel, 0);
+    g.computeVertexNormals();
+    return g;
+  }
+  function box(w,h,d, mat, x,y,z, parent){
+    var m = new T.Mesh(new T.BoxGeometry(w,h,d), mat);
+    m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true;
+    parent.add(m); return m;
+  }
+
+  /* ---------- materials ---------- */
+  var shellColors = {
+    pearl:   {top:'#f3f2ee', bottom:'#c9ced4', ink:'#3a3f46'},
+    graphite:{top:'#3a3f46', bottom:'#23272c', ink:'#d7dbe0'},
+    mint:    {top:'#dfeee6', bottom:'#b4c7bd', ink:'#2f4a3d'},
+    sky:     {top:'#dde9f5', bottom:'#b0c2d4', ink:'#2b4160'}
+  };
+  var topPlane = new T.Plane(new T.Vector3(0,1,0), -7);
+  var botPlane = new T.Plane(new T.Vector3(0,-1,0), 7);
+  var topMat = new T.MeshPhysicalMaterial({color: shellColors.pearl.top, roughness:0.42, metalness:0, clearcoat:0.4, clearcoatRoughness:0.5, side:T.DoubleSide, clippingPlanes:[topPlane], clipShadows:true});
+  var botMat = new T.MeshPhysicalMaterial({color: shellColors.pearl.bottom, roughness:0.55, metalness:0, side:T.DoubleSide, clippingPlanes:[botPlane], clipShadows:true});
+  var darkMat = new T.MeshStandardMaterial({color:'#1b1d20', roughness:0.7});
+  var rubberMat = new T.MeshStandardMaterial({color:'#2a2d31', roughness:0.95});
+  var metalMat = new T.MeshStandardMaterial({color:'#b8bec6', roughness:0.35, metalness:0.85});
+  var pcbMat = new T.MeshStandardMaterial({color:'#1d6a42', roughness:0.6});
+  var chipMat = new T.MeshStandardMaterial({color:'#101214', roughness:0.5});
+  var lipoMat = new T.MeshStandardMaterial({color:'#d9b64a', roughness:0.45});
+  var ceramicMat = new T.MeshStandardMaterial({color:'#e8dcc0', roughness:0.6});
+  var connMat = new T.MeshStandardMaterial({color:'#2b2e33', roughness:0.75});
+
+  /* ---------- groups ---------- */
+  var root = new T.Group(); scene.add(root);
+  var bottomG = new T.Group(); root.add(bottomG);
+  var pcbG = new T.Group(); root.add(pcbG);
+  var cardG = new T.Group(); root.add(cardG);
+  var topG = new T.Group(); root.add(topG);
+
+  var bodyGeo = roundedBoxGeo(100, 14, 66, 9, 2.4);
+  var topShell = new T.Mesh(bodyGeo, topMat); topShell.castShadow = true; topShell.receiveShadow = true; topG.add(topShell);
+  var botShell = new T.Mesh(bodyGeo, botMat); botShell.castShadow = true; botShell.receiveShadow = true; bottomG.add(botShell);
+
+  // parting line
+  var seam = new T.Mesh(roundedBoxGeo(100.4, 0.35, 66.4, 9.2, 0), new T.MeshStandardMaterial({color:'#2a2d31', roughness:0.8}));
+  seam.position.y = 6.82; bottomG.add(seam);
+
+  // card slot (dark inset on the front face)
+  box(3, 1.6, 58, darkMat, 48.6, 7.5, 0, bottomG);
+
+  // rubber feet
+  for (var i=0;i<4;i++){
+    var f = new T.Mesh(new T.CylinderGeometry(3.6,3.6,0.6,24), rubberMat);
+    f.position.set(i<2?-38:38, -0.3, (i%2?-22:22)); f.castShadow = false; bottomG.add(f);
+  }
+  // USB-C opening on the back face
+  var usbHole = new T.Mesh(new T.BoxGeometry(2.4, 3.4, 9.4), darkMat); usbHole.position.set(-49.4, 5.2, 0); bottomG.add(usbHole);
+
+  /* internals */
+  var pcb = box(92, 1.6, 58, pcbMat, 0, 2.8, 0, pcbG);
+  var connector = box(50, 3.5, 56, connMat, 23.5, 5.35, 0, pcbG);
+  box(50, 0.6, 2, connMat, 23.5, 7.4, 27.5, pcbG);    // card guide rails
+  box(50, 0.6, 2, connMat, 23.5, 7.4, -27.5, pcbG);
+  var module = box(15.5, 2.0, 10.5, metalMat, -25, 4.6, -18, pcbG);
+  box(6, 1.0, 2, ceramicMat, -15, 4.1, -27, pcbG);        // chip antenna
+  var battery = box(30, 5, 28, lipoMat, -25, 6.1, 11, pcbG);
+  box(2.2, 0.6, 1.2, darkMat, -9.5, 4.0, 15, pcbG);        // battery lead pad
+  var usb = box(9, 3.2, 8.9, metalMat, -45.3, 5.2, 0, pcbG);
+  box(3, 1, 3, chipMat, -40, 4.1, -16, pcbG);              // charger IC
+  box(4, 1.2, 4, chipMat, -40, 4.2, 20, pcbG);             // 7816 level shifter
+  box(6, 3.5, 3.5, darkMat, -30, 5.35, -27.5, pcbG);       // tactile switch
+  [[-8,-24],[-5,-24],[-2,-24],[-36,8],[-36,11],[0,22],[3,22]].forEach(function(p){ box(1.6,0.7,0.9, chipMat, p[0], 3.95, p[1], pcbG); });
+
+  // power button on the side (part of the top shell)
+  var pbtn = new T.Mesh(new T.BoxGeometry(9, 3, 1.4), new T.MeshStandardMaterial({color:'#2a2d31', roughness:0.6}));
+  pbtn.position.set(-30, 10.4, -33.1); topG.add(pbtn);
+
+  /* top label (silkscreen) */
+  var labelCanvas = document.createElement('canvas'); labelCanvas.width = 940; labelCanvas.height = 600;
+  var labelTex = new T.CanvasTexture(labelCanvas); labelTex.encoding = T.sRGBEncoding; labelTex.anisotropy = 8;
+  var labelMat = new T.MeshStandardMaterial({map: labelTex, transparent: true, roughness: 0.5, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1});
+  var labelMesh = new T.Mesh(new T.PlaneGeometry(94, 60), labelMat);
+  labelMesh.rotation.x = -Math.PI/2; labelMesh.position.y = 14.02; topG.add(labelMesh);
+
+  function drawBtRune(ctx, cx, cy, s){
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - s); ctx.lineTo(cx, cy + s);
+    ctx.moveTo(cx, cy - s); ctx.lineTo(cx + s*0.55, cy - s*0.5); ctx.lineTo(cx - s*0.55, cy + s*0.5);
+    ctx.moveTo(cx, cy + s); ctx.lineTo(cx + s*0.55, cy + s*0.5); ctx.lineTo(cx - s*0.55, cy - s*0.5);
+    ctx.stroke();
+  }
+  function drawLabel(ink){
+    var c = labelCanvas.getContext('2d');
+    c.clearRect(0,0,940,600);
+    c.fillStyle = ink; c.strokeStyle = ink;
+    c.textBaseline = 'alphabetic';
+    c.font = '600 46px "Barlow Semi Condensed", sans-serif';
+    c.fillText('NHI  BLE  READER', 40, 92);
+    c.font = '500 26px "Noto Sans TC", sans-serif';
+    c.fillText('健保卡 藍牙讀卡機', 42, 130);
+    c.font = '500 20px "Barlow Semi Condensed", sans-serif';
+    c.globalAlpha = 0.75;
+    c.fillText('BLE 5.0  ·  ISO 7816  ·  USB-C', 42, 548);
+    c.fillText('DIY-LAB', 820, 548);
+    c.globalAlpha = 1;
+    // LED rings and labels (LEDs at x=30 → canvas 770; z=-20,-13,-6 → canvas 100,170,240)
+    var leds = [[100,'藍牙'],[170,'讀卡'],[240,'電量']];
+    c.lineWidth = 2.5;
+    leds.forEach(function(l){
+      c.beginPath(); c.arc(770, l[0], 17, 0, Math.PI*2); c.stroke();
+      c.font = '500 22px "Noto Sans TC", sans-serif'; c.textAlign = 'right';
+      c.fillText(l[1], 735, l[0] + 8); c.textAlign = 'left';
+    });
+    c.lineWidth = 3; drawBtRune(c, 812, 100, 16);
+    // card arrow near the slot
+    c.font = '500 20px "Noto Sans TC", sans-serif'; c.textAlign = 'right';
+    c.fillText('插入健保卡 · 晶片朝上', 850, 462); c.textAlign = 'left';
+    c.beginPath(); c.moveTo(868, 450); c.lineTo(900, 455); c.lineTo(868, 460); c.closePath(); c.fill();
+    labelTex.needsUpdate = true;
+  }
+
+  /* LEDs */
+  var ledDefs = [
+    {z:-20, color:'#2f8bff'},
+    {z:-13, color:'#37d36a'},
+    {z:-6,  color:'#ffb02e'}
+  ];
+  var leds = ledDefs.map(function(d){
+    var m = new T.MeshStandardMaterial({color:'#dfe3e8', emissive:new T.Color(d.color), emissiveIntensity:0, roughness:0.3});
+    var mesh = new T.Mesh(new T.CylinderGeometry(1.25,1.25,0.6,24), m);
+    mesh.position.set(30, 14.25, d.z); topG.add(mesh);
+    return {mesh:mesh, mat:m, base:new T.Color(d.color)};
+  });
+
+  /* card */
+  var cardCanvas = document.createElement('canvas'); cardCanvas.width = 856; cardCanvas.height = 540;
+  (function(){
+    var c = cardCanvas.getContext('2d');
+    var g = c.createLinearGradient(0,0,856,540); g.addColorStop(0,'#f6fbf7'); g.addColorStop(1,'#cfe8d8');
+    c.fillStyle = g; c.fillRect(0,0,856,540);
+    c.fillStyle = '#4b9d6f'; c.fillRect(0, 0, 856, 10);
+    c.fillStyle = '#1f3b2e';
+    c.font = '700 40px "Noto Sans TC", sans-serif'; c.fillText('全民健康保險 IC 卡', 40, 90);
+    c.font = '400 22px "Noto Sans TC", sans-serif'; c.fillStyle = '#4a5a52'; c.fillText('示意卡片 · 非真實資料', 40, 125);
+    // photo placeholder (right side, the part that stays outside the slot)
+    c.fillStyle = '#9fb7a8'; c.fillRect(600, 130, 210, 270);
+    c.fillStyle = '#e9f1ec'; c.beginPath(); c.arc(705, 230, 48, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(705, 360, 80, 60, 0, Math.PI, 2*Math.PI); c.fill();
+    // name / id placeholders
+    c.fillStyle = '#2f4a3d'; c.font = '500 28px "Noto Sans TC", sans-serif';
+    c.fillText('姓名  王○○', 40, 300); c.fillText('身分證字號  A1********', 40, 350);
+    c.fillStyle = '#4a5a52'; c.font = '400 22px "Noto Sans TC", sans-serif'; c.fillText('卡號  0000 0000 0000', 40, 395);
+    // chip contacts (ISO 7816-2 location)
+    c.fillStyle = '#d7a93c'; c.fillRect(102, 192, 98, 94);
+    c.strokeStyle = '#8f6c1c'; c.lineWidth = 2;
+    c.strokeRect(102, 192, 98, 94);
+    c.beginPath(); c.moveTo(102, 223); c.lineTo(200, 223); c.moveTo(102, 255); c.lineTo(200, 255); c.moveTo(151, 192); c.lineTo(151, 286); c.stroke();
+  })();
+  var cardTex = new T.CanvasTexture(cardCanvas); cardTex.encoding = T.sRGBEncoding; cardTex.anisotropy = 8;
+  var cardEdge = new T.MeshStandardMaterial({color:'#eef3ef', roughness:0.5});
+  var cardTop = new T.MeshStandardMaterial({map:cardTex, roughness:0.45});
+  var cardMesh = new T.Mesh(new T.BoxGeometry(85.6, 0.76, 54), [cardEdge, cardEdge, cardTop, cardEdge, cardEdge, cardEdge]);
+  cardMesh.castShadow = true; cardMesh.receiveShadow = true; cardG.add(cardMesh);
+
+  /* ground + lighting */
+  var disc = new T.Mesh(new T.CircleGeometry(150, 64), new T.MeshStandardMaterial({color:'#dfe3e8', roughness:1}));
+  disc.rotation.x = -Math.PI/2; disc.position.y = -0.7; disc.receiveShadow = true; scene.add(disc);
+  var shadowPlane = new T.Mesh(new T.PlaneGeometry(600,600), new T.ShadowMaterial({opacity:0.28}));
+  shadowPlane.rotation.x = -Math.PI/2; shadowPlane.position.y = -0.65; shadowPlane.receiveShadow = true; scene.add(shadowPlane);
+
+  var hemi = new T.HemisphereLight(0xffffff, 0x9aa4ae, 0.75); scene.add(hemi);
+  var key = new T.DirectionalLight(0xffffff, 0.95); key.position.set(70, 150, 90); key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048); key.shadow.camera.left = -140; key.shadow.camera.right = 140;
+  key.shadow.camera.top = 140; key.shadow.camera.bottom = -140; key.shadow.camera.near = 10; key.shadow.camera.far = 500;
+  key.shadow.bias = -0.0005; key.shadow.radius = 4; scene.add(key);
+  var fill = new T.DirectionalLight(0xdfe9ff, 0.35); fill.position.set(-120, 80, -60); scene.add(fill);
+  var rim = new T.DirectionalLight(0xffffff, 0.3); rim.position.set(-40, 60, 160); scene.add(rim);
+
+  /* ---------- state ---------- */
+  var st = {
+    theta: 0.65, phi: 1.02, dist: 290,
+    tTheta: 0.65, tPhi: 1.02, tDist: 290,
+    target: new T.Vector3(0, 7, 0),
+    explode: 0, tExplode: 0,
+    card: 0, tCard: 0,           // 0 inserted, 1 ejected
+    spin: !reduceMotion,
+    dragging: false,
+    insertedAt: performance.now()
+  };
+  var views = {
+    iso:   {theta:0.65, phi:1.02, dist:290},
+    front: {theta:0.0,  phi:1.25, dist:260},
+    top:   {theta:0.9,  phi:0.12, dist:280},
+    side:  {theta:Math.PI/2, phi:1.2, dist:270}
+  };
+
+  /* ---------- exploded-view tags ---------- */
+  var tagDefs = [
+    {text:'上蓋 PC+ABS，霧面咬花', pos:function(k){ return [-12, 14 + 42*k, -24]; }},
+    {text:'狀態指示燈 藍牙 / 讀卡 / 電量', pos:function(k){ return [30, 14.4 + 42*k, -13]; }},
+    {text:'ISO 7816 推入式卡座', pos:function(k){ return [23, 7.2 + 14*k, 10]; }},
+    {text:'健保 IC 卡（露出 30 mm）', pos:function(k){ return [78, 7.9 + 22*k, -10]; }},
+    {text:'主板 BLE SoC + 7816 介面', pos:function(k){ return [-25, 5.7 + 14*k, -18]; }},
+    {text:'LiPo 902030 · 500 mAh', pos:function(k){ return [-25, 8.7 + 14*k, 11]; }},
+    {text:'USB-C 充電 / 韌體更新', pos:function(k){ return [-46, 6.9 + 14*k, 0]; }},
+    {text:'下蓋 + 防滑腳墊', pos:function(k){ return [0, 2.5, 30]; }}
+  ];
+  tagDefs.forEach(function(d){
+    var el = document.createElement('div'); el.className = 'tag';
+    el.innerHTML = '<span></span><i></i><b></b>';
+    el.querySelector('span').textContent = d.text;
+    tagsEl.appendChild(el); d.el = el;
+  });
+
+  /* ---------- theme ---------- */
+  function applyTheme(){
+    renderer.setClearColor(new T.Color(cssVar('--bg')));
+    disc.material.color.set(cssVar('--disc'));
+    var dark = getComputedStyle(document.documentElement).colorScheme === 'dark' ||
+               document.documentElement.getAttribute('data-theme') === 'dark' ||
+               (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    shadowPlane.material.opacity = dark ? 0.45 : 0.28;
+    hemi.groundColor.set(dark ? '#3a4149' : '#9aa4ae');
+  }
+  applyTheme();
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  new MutationObserver(applyTheme).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+
+  /* ---------- controls ---------- */
+  var pointers = {};
+  var lastPinch = 0;
+  canvas.addEventListener('pointerdown', function(e){
+    canvas.setPointerCapture(e.pointerId);
+    pointers[e.pointerId] = {x:e.clientX, y:e.clientY};
+    st.dragging = true;
+    var ids = Object.keys(pointers);
+    if (ids.length === 2) lastPinch = pinchDist();
+  });
+  function pinchDist(){
+    var ids = Object.keys(pointers); if (ids.length < 2) return 0;
+    var a = pointers[ids[0]], b = pointers[ids[1]];
+    return Math.hypot(a.x-b.x, a.y-b.y);
+  }
+  canvas.addEventListener('pointermove', function(e){
+    if (!pointers[e.pointerId]) return;
+    var p = pointers[e.pointerId];
+    var dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    var ids = Object.keys(pointers);
+    if (ids.length === 1){
+      st.tTheta += dx * 0.006; st.tPhi -= dy * 0.006;
+      st.tPhi = Math.max(0.12, Math.min(1.5, st.tPhi));
+      st.theta = st.tTheta; st.phi = st.tPhi;
+      setViewPressed(null);
+    } else if (ids.length === 2){
+      var d = pinchDist();
+      if (lastPinch > 0) st.tDist = clampDist(st.tDist * lastPinch / d);
+      lastPinch = d;
+    }
+  });
+  function endPointer(e){ delete pointers[e.pointerId]; if (!Object.keys(pointers).length) st.dragging = false; lastPinch = 0; }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('wheel', function(e){
+    e.preventDefault();
+    st.tDist = clampDist(st.tDist * (1 + e.deltaY * 0.0012));
+  }, {passive:false});
+  canvas.addEventListener('keydown', function(e){
+    var step = 0.08;
+    if (e.key === 'ArrowLeft'){ st.tTheta -= step; } else if (e.key === 'ArrowRight'){ st.tTheta += step; }
+    else if (e.key === 'ArrowUp'){ st.tPhi = Math.max(0.12, st.tPhi - step); } else if (e.key === 'ArrowDown'){ st.tPhi = Math.min(1.5, st.tPhi + step); }
+    else if (e.key === '+' || e.key === '='){ st.tDist = clampDist(st.tDist*0.9); } else if (e.key === '-'){ st.tDist = clampDist(st.tDist*1.1); }
+    else return;
+    e.preventDefault();
+  });
+  function clampDist(d){ return Math.max(140, Math.min(700, d)); }
+
+  var viewBtns = Array.prototype.slice.call(document.querySelectorAll('#views button'));
+  function setViewPressed(name){ viewBtns.forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.view === name)); }); }
+  viewBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      var v = views[b.dataset.view];
+      // unwrap theta so the camera takes the short way round
+      var cur = st.theta % (Math.PI*2); var diff = v.theta - cur;
+      while (diff > Math.PI) diff -= Math.PI*2; while (diff < -Math.PI) diff += Math.PI*2;
+      st.theta = cur; st.tTheta = cur + diff; st.tPhi = v.phi; st.tDist = v.dist;
+      st.spin = false; spinBtn.setAttribute('aria-pressed','false');
+      setViewPressed(b.dataset.view);
+    });
+  });
+
+  var explodeIn = document.getElementById('explode');
+  var explodeVal = document.getElementById('explodeVal');
+  explodeIn.addEventListener('input', function(){ st.tExplode = explodeIn.value / 100; explodeVal.textContent = explodeIn.value + '%'; });
+
+  var cardBtn = document.getElementById('cardBtn');
+  cardBtn.addEventListener('click', function(){
+    var inserted = st.tCard === 0;
+    st.tCard = inserted ? 1 : 0;
+    if (!inserted) st.insertedAt = performance.now() + 500;
+    cardBtn.setAttribute('aria-pressed', String(!inserted));
+    cardBtn.textContent = inserted ? '健保卡：已退出' : '健保卡：已插入';
+  });
+  var spinBtn = document.getElementById('spinBtn');
+  spinBtn.setAttribute('aria-pressed', String(st.spin));
+  spinBtn.addEventListener('click', function(){ st.spin = !st.spin; spinBtn.setAttribute('aria-pressed', String(st.spin)); });
+
+  var swatches = Array.prototype.slice.call(document.querySelectorAll('.swatch'));
+  function setShell(name){
+    var c = shellColors[name];
+    topMat.color.set(c.top); botMat.color.set(c.bottom); pbtn.material.color.set(name === 'graphite' ? '#6a7079' : '#2a2d31');
+    drawLabel(c.ink);
+    swatches.forEach(function(s){ s.setAttribute('aria-pressed', String(s.dataset.color === name)); });
+    try { localStorage.setItem('nhi-shell', name); } catch (e) {}
+  }
+  swatches.forEach(function(s){ s.addEventListener('click', function(){ setShell(s.dataset.color); }); });
+  var savedShell = 'pearl';
+  try { savedShell = localStorage.getItem('nhi-shell') || 'pearl'; } catch (e) {}
+  if (!shellColors[savedShell]) savedShell = 'pearl';
+  setShell(savedShell);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ drawLabel(shellColors[currentShell()].ink); });
+  function currentShell(){ var p = swatches.filter(function(s){ return s.getAttribute('aria-pressed') === 'true'; })[0]; return p ? p.dataset.color : 'pearl'; }
+
+  /* ---------- resize ---------- */
+  function resize(){
+    var w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage);
+  resize();
+
+  /* ---------- animation ---------- */
+  var ledDot = document.getElementById('ledDot');
+  var tmp = new T.Vector3();
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  var last = performance.now();
+  function frame(now){
+    var dt = Math.min(0.05, (now - last)/1000); last = now;
+    var ease = reduceMotion ? 1 : 1 - Math.pow(0.001, dt);   // frame-rate independent smoothing
+
+    if (st.spin && !st.dragging) st.tTheta += dt * 0.25;
+    st.theta = lerp(st.theta, st.tTheta, ease);
+    st.phi = lerp(st.phi, st.tPhi, ease);
+    st.dist = lerp(st.dist, st.tDist, ease);
+    st.explode = lerp(st.explode, st.tExplode, ease * 0.8);
+    st.card = lerp(st.card, st.tCard, ease * 0.8);
+
+    camera.position.set(
+      st.target.x + st.dist * Math.sin(st.phi) * Math.cos(st.theta),
+      st.target.y + st.dist * Math.cos(st.phi),
+      st.target.z + st.dist * Math.sin(st.phi) * Math.sin(st.theta)
+    );
+    camera.lookAt(st.target);
+
+    var k = st.explode;
+    topG.position.y = 42 * k;
+    topPlane.constant = -(7 + 42 * k);
+    pcbG.position.y = 14 * k;
+    cardG.position.set(37.2 + st.card * 30, 7.9 + 14 * k + 8 * k, 0);
+    st.target.y = 7 + 20 * k;
+
+    // LEDs
+    var t = now / 1000;
+    var btOn = 0.55 + 0.45 * Math.sin(t * 2.2);                 // slow breathing: advertising / paired
+    leds[0].mat.emissiveIntensity = btOn * 2.2;
+    var inserted = st.card < 0.15;
+    var since = (now - st.insertedAt) / 1000;
+    var cardOn = inserted ? (since < 2 ? (Math.sin(t * 14) > 0 ? 1 : 0.05) : 1) : 0;
+    leds[1].mat.emissiveIntensity = cardOn * 2.4;
+    leds[2].mat.emissiveIntensity = 0.0;
+    leds.forEach(function(l, i){ var on = l.mat.emissiveIntensity > 0.2; l.mat.color.set(on ? '#ffffff' : '#dfe3e8'); });
+    ledDot.style.background = inserted ? (cardOn > 0.5 ? '#37d36a' : '#9aa3ad') : '#9aa3ad';
+
+    // tags
+    var show = Math.max(0, Math.min(1, (k - 0.3) / 0.3));
+    var w = stage.clientWidth, h = stage.clientHeight;
+    tagDefs.forEach(function(d){
+      var p = d.pos(k); tmp.set(p[0], p[1], p[2]).applyMatrix4(root.matrixWorld).project(camera);
+      var vis = tmp.z < 1 && show > 0;
+      d.el.style.opacity = vis ? show : 0;
+      if (vis){ d.el.style.left = ((tmp.x*0.5+0.5)*w) + 'px'; d.el.style.top = ((-tmp.y*0.5+0.5)*h) + 'px'; }
+    });
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
