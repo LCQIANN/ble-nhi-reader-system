@@ -841,9 +841,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     elder2.position.set(-1750, FLOOR_Y, -1950); elder2.rotation.y = 0.35;
   } else {
     // Rowan (older adult, seated, hands in lap) at the measurement table; Nora (older woman) standing at the window
-    elderG = buildElder(scene, {glb:'assets/rowan.glb', chair:'#b78a5e', headband:headG, bandY:1272, bandZ:40, bandSX:0.87, bandSZ:1.41, headY:1240});
+    // model files sit next to the page; a build may inline them as data URIs (window.ASSET_ROWAN / ASSET_NORA) where files can't be served
+    elderG = buildElder(scene, {glb: window.ASSET_ROWAN || 'assets/rowan.glb', chair:'#b78a5e', headband:headG, bandY:1272, bandZ:40, bandSX:0.87, bandSZ:1.41, headY:1240});
     elderG.position.set(-1000, FLOOR_Y, 0); elderG.rotation.y = Math.PI/2;
-    elder2 = buildElder(scene, {glb:'assets/nora.glb', headY:1500});
+    elder2 = buildElder(scene, {glb: window.ASSET_NORA || 'assets/nora.glb', headY:1500});
     elder2.position.set(-1450, FLOOR_Y, -2000); elder2.rotation.y = Math.PI - 0.7;
   }
   scene.updateMatrixWorld(true);
