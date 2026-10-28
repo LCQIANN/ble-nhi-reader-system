@@ -206,6 +206,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <li><em>麵包板量測線</em><strong>取消，改為板上測試點</strong></li>
       </ul>
     </section>
+
   </aside>
 </div>
 
@@ -505,8 +506,24 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   var tableTop = prim(roundedBoxGeo(1000, 30, 620, 40, 2), woodMat, -50, -30, -10, roomG); ol(tableTop, 1.015);
   [[-510, -290],[410, -290],[-510, 270],[410, 270]].forEach(function(p){ prim(new T.CylinderGeometry(22, 22, 720, 16), mk('#8a8f96', {roughness:0.4, metalness:0.6}), p[0], -390, p[1], roomG); });
 
+  /* photoreal head: Lee Perry-Smith scan, 50 mm per model unit (crown to chin ≈ 230 mm); eyes closed, which suits the eyes-closed resting EEG protocol */
+  var SCAN = 50;
+  function loadScanHead(holder){
+    if (!T.GLTFLoader || typeof LPS_GLB === 'undefined') return;
+    var tl = new T.TextureLoader();
+    var col = tl.load(LPS_COL); col.encoding = T.sRGBEncoding; col.anisotropy = 8;
+    var nrm = tl.load(LPS_NRM);
+    var m = new T.MeshStandardMaterial({map: col, normalMap: nrm, normalScale: new T.Vector2(0.7, 0.7), roughness: 0.6, metalness: 0, color: '#e6dbd3'});
+    new T.GLTFLoader().load(LPS_GLB, function(gltf){
+      var mesh = null; gltf.scene.traverse(function(n){ if (n.isMesh && !mesh) mesh = n; });
+      if (!mesh) return;
+      mesh.material = m; mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.position.set(0, 0, 0); mesh.rotation.set(0, 0, 0); mesh.scale.setScalar(SCAN);
+      holder.add(mesh);
+    });
+  }
   function buildElder(parent, o){
-    var HS = o.hs || 1, W = TOON ? 1.08 : 1;
+    var HS = o.hs || 1, W = TOON ? 1.08 : (o.scanHead ? 1.1 : 1);
     var g = new T.Group(); parent.add(g);
     var skin = mk(o.skin, {roughness:0.62}), hair = mk(o.hair, {roughness:0.95}), top = mk(o.top, {roughness:0.92}), pants = mk(o.pants, {roughness:0.9});
     var shoe = mk('#2b2b2e', {roughness:0.7}), chairMat = mk(o.chair, {roughness:0.65}), glassesMat = mk('#3b3b3f', {roughness:0.4, metalness:0.3});
@@ -523,6 +540,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     // torso
     var torso = prim(roundedBoxGeo(400*W, 540, 230*W, 110, 40), top, 0, 500, -120, g); ol(torso, 1.03);
     prim(new T.BoxGeometry(110*W, 300, 14), mk(o.shirt || '#f2eee6', {roughness:0.9}), 0, 880, -120 + 116*W, g);           // shirt showing in the cardigan opening
+    [-1, 1].forEach(function(s){                                                                                            // cardigan collar / lapels
+      var lapel = prim(new T.BoxGeometry(16, 230, 22), top, s*62*W, 905, -120 + 118*W, g); lapel.rotation.z = s*0.22;
+    });
     [1, 2, 3].forEach(function(i){ prim(new T.SphereGeometry(9, 10, 8), mk('#5a4a3a'), 60*W, 560 + i*100, -120 + 124*W, g); });
     // arms resting on the table edge
     [-1,1].forEach(function(s){
@@ -530,6 +550,25 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       limb([s*245*W, 790, 20], [s*200*W, 775, 330], 42*W, top, g);
       var hand = prim(new T.SphereGeometry(46*W, 18, 14), skin, s*200*W, 776, 365, g); hand.scale.set(1, 0.6, 1.3); ol(hand);
     });
+    if (o.scanHead){
+      var sy = 1130, sz = -100;                       // head origin: the scan's own neck and shoulder tops sink into the cardigan
+      var holder = new T.Group(); holder.position.set(0, sy, sz); g.add(holder);
+      loadScanHead(holder);
+      if (o.glasses){                                 // eye centres measured on the scan: (±37, 84, 90) mm
+        [-1, 1].forEach(function(s){
+          var ring = new T.Mesh(new T.TorusGeometry(16, 1.3, 8, 32), glassesMat); ring.position.set(s*36, 85, 100); holder.add(ring);
+          var temple = new T.Mesh(new T.BoxGeometry(2, 2.4, 90), glassesMat); temple.position.set(s*63, 84, 56); temple.rotation.y = -s*0.2; holder.add(temple);
+        });
+        var bridge = new T.Mesh(new T.BoxGeometry(14, 2, 2), glassesMat); bridge.position.set(0, 88, 102); holder.add(bridge);
+      }
+      if (o.headband){                                // forehead cross-section at band height ≈ 154 × 192 mm
+        o.headband.position.set(0, sy + 114, sz + 8);
+        o.headband.scale.set(0.87, 1, 1.26);
+        g.add(o.headband);
+      }
+      g.userData.headY = sy; g.userData.hs = 1;
+      return g;
+    }
     // neck and head
     prim(new T.CylinderGeometry(50*HS, 56*HS, 100, 18), skin, 0, 1070, -100, g);
     var hy = 1120 + 105*HS, hz = -90;
@@ -802,12 +841,12 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     links.push({curve:curve, line:line, mat:mat, pulses:pulses});
   }
   /* the participant at the table (wearing the headband) and another member resting by the window */
-  var elderG = buildElder(scene, {hs: TOON ? 1.35 : 1, skin: TOON ? '#f5cfb2' : '#d9b394', hair: TOON ? '#d9d7d2' : '#8d8982',
-    top: TOON ? '#2bb5a8' : '#8e9b7e', pants: TOON ? '#3f4fa8' : '#4b4f58', chair: TOON ? '#f3a640' : '#b78a5e', glasses: true, headband: headG});
+  var elderG = buildElder(scene, {hs: TOON ? 1.35 : 1, skin: TOON ? '#f5cfb2' : '#e2c3ab', hair: TOON ? '#d9d7d2' : '#8d8982',
+    top: TOON ? '#2bb5a8' : '#8e9b7e', pants: TOON ? '#3f4fa8' : '#4b4f58', chair: TOON ? '#f3a640' : '#b78a5e', glasses: true, headband: headG, scanHead: !TOON});
   elderG.position.set(-790, FLOOR_Y, 0); elderG.rotation.y = Math.PI/2;
   var elder2 = buildElder(scene, {hs: TOON ? 1.35 : 1, skin: TOON ? '#f3c9ac' : '#d2ab8c', hair: TOON ? '#e9e7e2' : '#a8a39b', shirt: '#e8dcc8',
-    top: TOON ? '#ff7f7f' : '#b06a6a', pants: TOON ? '#6a4fa8' : '#5d6473', chair: TOON ? '#f3a640' : '#b78a5e', glasses: false});
-  elder2.position.set(-1750, FLOOR_Y, -1950); elder2.rotation.y = 0.35;
+    top: TOON ? '#ff7f7f' : '#b06a6a', pants: TOON ? '#6a4fa8' : '#5d6473', chair: TOON ? '#f3a640' : '#b78a5e', glasses: false, scanHead: !TOON});
+  elder2.position.set(-1750, FLOOR_Y, -1950); elder2.rotation.y = TOON ? 0.35 : Math.PI + 0.35;   // the second member looks out of the window
   scene.updateMatrixWorld(true);
   var headWorld = headG.localToWorld(new T.Vector3(0, BAND_H/2, 0));
   var readerAnchor = root.localToWorld(new T.Vector3(30, 15, -13));
