@@ -10,7 +10,9 @@
 
 | 檔案 | 說明 |
 |---|---|
-| `藍牙健保卡讀卡系統_3D.html` | 最新版，三件式系統（直接用瀏覽器開啟） |
+| `藍牙健保卡讀卡系統_3D.html` | 三件式系統（直接用瀏覽器開啟） |
+| `日照中心_寫實版.html` / `daycare-real.html` | 日照中心情境，寫實風格 |
+| `日照中心_動畫版.html` / `daycare-toon.html` | 日照中心情境，動畫風格 |
 | `藍牙健保卡讀卡機_3D.html` | 舊版，只有讀卡機，側邊仍有電源鍵 |
 | `ble_nhi_reader_3d.html` | 更早的讀卡機版本 |
 | `739827.jpg` | 讀卡機麵包板原型照片 |
@@ -21,6 +23,11 @@
 ## 線上 3D 模擬
 
 直接開啟：https://lcqiann.github.io/ble-nhi-reader-system/
+
+日照中心情境版（長者配戴頭帶，無自動旋轉）：
+
+- 寫實版：https://lcqiann.github.io/ble-nhi-reader-system/daycare-real.html
+- 動畫版：https://lcqiann.github.io/ble-nhi-reader-system/daycare-toon.html
 
 （GitHub Pages 自 `index.html` 發佈，與 `藍牙健保卡讀卡系統_3D.html` 內容相同）
 
