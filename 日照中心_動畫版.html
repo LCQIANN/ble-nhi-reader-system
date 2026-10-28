@@ -506,25 +506,31 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   var tableTop = prim(roundedBoxGeo(1000, 30, 620, 40, 2), woodMat, -50, -30, -10, roomG); ol(tableTop, 1.015);
   [[-510, -290],[410, -290],[-510, 270],[410, 270]].forEach(function(p){ prim(new T.CylinderGeometry(22, 22, 720, 16), mk('#8a8f96', {roughness:0.4, metalness:0.6}), p[0], -390, p[1], roomG); });
 
-  /* photoreal head: Lee Perry-Smith scan, 50 mm per model unit (crown to chin ≈ 230 mm); eyes closed, which suits the eyes-closed resting EEG protocol */
-  var SCAN = 50;
-  function loadScanHead(holder){
-    if (!T.GLTFLoader || typeof LPS_GLB === 'undefined') return;
-    var tl = new T.TextureLoader();
-    var col = tl.load(LPS_COL); col.encoding = T.sRGBEncoding; col.anisotropy = 8;
-    var nrm = tl.load(LPS_NRM);
-    var m = new T.MeshStandardMaterial({map: col, normalMap: nrm, normalScale: new T.Vector2(0.7, 0.7), roughness: 0.6, metalness: 0, color: '#e6dbd3'});
-    new T.GLTFLoader().load(LPS_GLB, function(gltf){
-      var mesh = null; gltf.scene.traverse(function(n){ if (n.isMesh && !mesh) mesh = n; });
-      if (!mesh) return;
-      mesh.material = m; mesh.castShadow = true; mesh.receiveShadow = true;
-      mesh.position.set(0, 0, 0); mesh.rotation.set(0, 0, 0); mesh.scale.setScalar(SCAN);
-      holder.add(mesh);
-    });
-  }
   function buildElder(parent, o){
-    var HS = o.hs || 1, W = TOON ? 1.08 : (o.scanHead ? 1.1 : 1);
+    var HS = o.hs || 1, W = TOON ? 1.08 : 1;
     var g = new T.Group(); parent.add(g);
+    if (o.glb){
+      /* CC0 MakeHuman figure (metres, feet on the floor, facing +z), loaded as-is; our chair is placed under the measured hips */
+      if (o.chair){
+        var cg = new T.Group(); cg.position.z = 80; g.add(cg);
+        var cm = mk(o.chair, {roughness:0.65});
+        prim(roundedBoxGeo(460, 40, 460, 30, 4), cm, 0, 410, 0, cg);
+        prim(roundedBoxGeo(460, 480, 40, 20, 3), cm, 0, 450, -230, cg);
+        [[-200,-200],[200,-200],[-200,200],[200,200]].forEach(function(p){ prim(new T.CylinderGeometry(16, 16, 410, 12), cm, p[0], 205, p[1], cg); });
+      }
+      var fig = new T.Group(); fig.scale.setScalar(1000); g.add(fig);
+      if (T.GLTFLoader) new T.GLTFLoader().load(o.glb, function(gltf){
+        gltf.scene.traverse(function(n){ if (n.isMesh){ n.castShadow = true; n.receiveShadow = true; if (n.material && n.material.map) n.material.map.anisotropy = 8; } });
+        fig.add(gltf.scene);
+      });
+      if (o.headband){                                  // forehead cross-section measured on the model: ≈154 × 216 mm, centre 40 mm forward
+        o.headband.position.set(0, o.bandY, o.bandZ);
+        o.headband.scale.set(o.bandSX, 1, o.bandSZ);
+        g.add(o.headband);
+      }
+      g.userData.headY = o.headY; g.userData.hs = 1;
+      return g;
+    }
     var skin = mk(o.skin, {roughness:0.62}), hair = mk(o.hair, {roughness:0.95}), top = mk(o.top, {roughness:0.92}), pants = mk(o.pants, {roughness:0.9});
     var shoe = mk('#2b2b2e', {roughness:0.7}), chairMat = mk(o.chair, {roughness:0.65}), glassesMat = mk('#3b3b3f', {roughness:0.4, metalness:0.3});
     // chair
@@ -550,25 +556,6 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       limb([s*245*W, 790, 20], [s*200*W, 775, 330], 42*W, top, g);
       var hand = prim(new T.SphereGeometry(46*W, 18, 14), skin, s*200*W, 776, 365, g); hand.scale.set(1, 0.6, 1.3); ol(hand);
     });
-    if (o.scanHead){
-      var sy = 1130, sz = -100;                       // head origin: the scan's own neck and shoulder tops sink into the cardigan
-      var holder = new T.Group(); holder.position.set(0, sy, sz); g.add(holder);
-      loadScanHead(holder);
-      if (o.glasses){                                 // eye centres measured on the scan: (±37, 84, 90) mm
-        [-1, 1].forEach(function(s){
-          var ring = new T.Mesh(new T.TorusGeometry(16, 1.3, 8, 32), glassesMat); ring.position.set(s*36, 85, 100); holder.add(ring);
-          var temple = new T.Mesh(new T.BoxGeometry(2, 2.4, 90), glassesMat); temple.position.set(s*63, 84, 56); temple.rotation.y = -s*0.2; holder.add(temple);
-        });
-        var bridge = new T.Mesh(new T.BoxGeometry(14, 2, 2), glassesMat); bridge.position.set(0, 88, 102); holder.add(bridge);
-      }
-      if (o.headband){                                // forehead cross-section at band height ≈ 154 × 192 mm
-        o.headband.position.set(0, sy + 114, sz + 8);
-        o.headband.scale.set(0.87, 1, 1.26);
-        g.add(o.headband);
-      }
-      g.userData.headY = sy; g.userData.hs = 1;
-      return g;
-    }
     // neck and head
     prim(new T.CylinderGeometry(50*HS, 56*HS, 100, 18), skin, 0, 1070, -100, g);
     var hy = 1120 + 105*HS, hz = -90;
@@ -841,12 +828,19 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     links.push({curve:curve, line:line, mat:mat, pulses:pulses});
   }
   /* the participant at the table (wearing the headband) and another member resting by the window */
-  var elderG = buildElder(scene, {hs: TOON ? 1.35 : 1, skin: TOON ? '#f5cfb2' : '#e2c3ab', hair: TOON ? '#d9d7d2' : '#8d8982',
-    top: TOON ? '#2bb5a8' : '#8e9b7e', pants: TOON ? '#3f4fa8' : '#4b4f58', chair: TOON ? '#f3a640' : '#b78a5e', glasses: true, headband: headG, scanHead: !TOON});
-  elderG.position.set(-790, FLOOR_Y, 0); elderG.rotation.y = Math.PI/2;
-  var elder2 = buildElder(scene, {hs: TOON ? 1.35 : 1, skin: TOON ? '#f3c9ac' : '#d2ab8c', hair: TOON ? '#e9e7e2' : '#a8a39b', shirt: '#e8dcc8',
-    top: TOON ? '#ff7f7f' : '#b06a6a', pants: TOON ? '#6a4fa8' : '#5d6473', chair: TOON ? '#f3a640' : '#b78a5e', glasses: false, scanHead: !TOON});
-  elder2.position.set(-1750, FLOOR_Y, -1950); elder2.rotation.y = TOON ? 0.35 : Math.PI + 0.35;   // the second member looks out of the window
+  var elderG, elder2;
+  if (TOON){
+    elderG = buildElder(scene, {hs:1.35, skin:'#f5cfb2', hair:'#d9d7d2', top:'#2bb5a8', pants:'#3f4fa8', chair:'#f3a640', glasses:true, headband:headG});
+    elderG.position.set(-790, FLOOR_Y, 0); elderG.rotation.y = Math.PI/2;
+    elder2 = buildElder(scene, {hs:1.35, skin:'#f3c9ac', hair:'#e9e7e2', shirt:'#e8dcc8', top:'#ff7f7f', pants:'#6a4fa8', chair:'#f3a640', glasses:false});
+    elder2.position.set(-1750, FLOOR_Y, -1950); elder2.rotation.y = 0.35;
+  } else {
+    // Rowan (older adult, seated, hands in lap) at the measurement table; Nora (older woman) standing at the window
+    elderG = buildElder(scene, {glb:'assets/rowan.glb', chair:'#b78a5e', headband:headG, bandY:1272, bandZ:40, bandSX:0.87, bandSZ:1.41, headY:1240});
+    elderG.position.set(-1000, FLOOR_Y, 0); elderG.rotation.y = Math.PI/2;
+    elder2 = buildElder(scene, {glb:'assets/nora.glb', headY:1500});
+    elder2.position.set(-1450, FLOOR_Y, -2000); elder2.rotation.y = Math.PI - 0.7;
+  }
   scene.updateMatrixWorld(true);
   var headWorld = headG.localToWorld(new T.Vector3(0, BAND_H/2, 0));
   var readerAnchor = root.localToWorld(new T.Vector3(30, 15, -13));
@@ -870,7 +864,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   /* ---------- state ---------- */
   var focusDefs = {
     all:    {target:[-250, 420, -500], dist:3100, theta:0.95, phi:1.27},
-    elder:  {target:[-760, 420, 0],    dist:1500, theta:0.7,  phi:1.22},
+    elder:  {target:[TOON ? -760 : -960, 420, 0], dist:1500, theta:0.7, phi:1.22},
     head:   {target:[headWorld.x, headWorld.y + 10, headWorld.z], dist:430, theta:0.5, phi:1.2},
     tablet: {target:[-60, 55, -120],   dist:520,  theta:0.35, phi:1.15},
     reader: {target:[118, 8, 58],      dist:290,  theta:0.65, phi:1.02}
@@ -912,7 +906,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     tagsEl.appendChild(el); d.el = el;
   });
   var devTags = [
-    {title:'長者（受測者）', sub:'配戴腦波頭帶，健保卡報到', obj:elderG, local:[0, 960, -230]},
+    {title:'長者（受測者）', sub:'配戴腦波頭帶，健保卡報到', obj:elderG, local:[0, TOON ? 960 : 1000, -260]},
     {title:'① 腦波頭帶', sub:'TPU 列印兩件式 · 金杯電極 ×3', obj:headG, local:[0, BAND_H + 2, 0]},
     {title:'② 平板 量測 App', sub:'接收卡號與腦波', obj:tiltG, local:[0, 8, -40]},
     {title:'③ 藍牙健保卡讀卡機', sub:'無按鍵 · 插卡即喚醒', obj:root, local:[-10, 15, -20]}

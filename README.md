@@ -34,3 +34,7 @@
 ## Claude 版本
 
 https://claude.ai/artifact/S5hW3s3kvN6sxsTNieaWWV
+
+## 素材來源
+
+- 日照中心寫實版的長者人物 `assets/rowan.glb`、`assets/nora.glb`：Innerscene 3D People（MakeHuman / MPFB 製作），公有領域 CC0。原檔已縮減貼圖以便網頁載入。
