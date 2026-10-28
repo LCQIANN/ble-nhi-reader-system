@@ -970,8 +970,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       });
       return g;
     }
-    // the nurse model's tablet sits inside her fingers; moving it 35 mm forward puts it in front of the hands
-    function fixTablet(sc){ sc.traverse(function(n){ if (n.name && n.name.indexOf('Tablet') === 0) n.position.z += 0.035; }); }
+    // the nurse model's tablet sits inside her fingers; moving it 55 mm toward her puts both hands behind it with the fingertips over the top edge
+    function fixTablet(sc){ sc.traverse(function(n){ if (n.name && n.name.indexOf('Tablet') === 0) n.position.z -= 0.055; }); }
     elder2 = loadFigure('micah', -1250, -700, 0.34, fixTablet);   // 居服員，拿平板看量測
     loadFigure('physio', -2000, -1650, 1.9);                   // 居服員攙扶長者散步
     loadFigure('wheelchair', 3100, -1800, -0.9);              // 輪椅長者與陪伴者
