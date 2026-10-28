@@ -38,6 +38,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);
 .hud{position:absolute;left:0;top:0;padding:18px 4px;pointer-events:none;z-index:2}
 .hud h1{margin:0;font-family:var(--font-display);font-weight:700;font-size:26px;letter-spacing:.01em;line-height:1.1;text-wrap:balance}
 .hud p{margin:4px 0 0;color:var(--muted);font-size:12.5px;max-width:36ch}
+.hud h1,.hud p{text-shadow:0 0 6px var(--bg),0 0 14px var(--bg),0 0 20px var(--bg)}
 .hint{position:absolute;left:4px;bottom:14px;color:var(--muted);font-size:12px;pointer-events:none}
 .views{position:absolute;right:4px;top:18px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .views button{font:500 13px var(--font-body);padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
@@ -209,7 +210,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 
     <section>
       <h2>素材來源</h2>
-      <p class="note">長者人物：Innerscene 3D People 素材庫的 Rowan（長者坐姿）與 Nora（年長女性），以 MakeHuman / MPFB 製作，公有領域 CC0。場景與裝置皆為程式建模。</p>
+      <p class="note">人物：Innerscene 3D People 素材庫（MakeHuman / MPFB 製作，公有領域 CC0）：Rowan 長者坐姿、Micah 居服員、Alex 與 Casey 攙扶散步、Nora 與 Micah 輪椅組、Taylor 與志工。場景與裝置皆為程式建模。</p>
     </section>
   </aside>
 </div>
@@ -506,6 +507,108 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     var lm = mk(TOON ? '#4fc06a' : '#5f9a5a', {roughness:0.9});
     [[0, 520, 0, 260],[-150, 400, 80, 200],[160, 430, -60, 210],[40, 680, 40, 180]].forEach(function(p){ ol(prim(new T.SphereGeometry(p[3], 18, 14), lm, 1900 + p[0], FLOOR_Y + p[1], -2050 + p[2], roomG)); });
   })();
+  /* ---- day-care furnishing: entrance with sign, reception counter, cubby shelf, wall TV, activity whiteboard, round activity table ---- */
+  var paleMat = mk(TOON ? '#ffffff' : '#f4f1ea', {roughness:0.6});
+  var counterMat = mk(TOON ? '#ffd27a' : '#d9c3a0', {roughness:0.6});
+  var darkWood = mk(TOON ? '#b97a4a' : '#7a5a3d', {roughness:0.7});
+  var blackMat = mk('#17181b', {roughness:0.5});
+  function textPlane(w, h, draw, px, py, pz, ry, parent){
+    var cv = document.createElement('canvas'); cv.width = 1024; cv.height = Math.round(1024 * h / w); var c = cv.getContext('2d');
+    draw(c, cv.width, cv.height);
+    var tex = new T.CanvasTexture(cv); tex.encoding = T.sRGBEncoding; tex.anisotropy = 8;
+    var m = TOON ? new T.MeshToonMaterial({map:tex, gradientMap:gradientMap}) : new T.MeshStandardMaterial({map:tex, roughness:0.85});
+    var pl = new T.Mesh(new T.PlaneGeometry(w, h), m); pl.position.set(px, py, pz); pl.rotation.y = ry || 0; parent.add(pl); return pl;
+  }
+  // entrance door on the left wall, sign above it
+  prim(new T.BoxGeometry(30, 2160, 1010), paleMat, -2778, FLOOR_Y + 1080, -1300, roomG);
+  prim(new T.BoxGeometry(40, 2100, 950), darkWood, -2765, FLOOR_Y + 1050, -1300, roomG);
+  (function(){ var dw = new T.Mesh(new T.PlaneGeometry(320, 480), skyMat); dw.position.set(-2738, FLOOR_Y + 1500, -1300); dw.rotation.y = Math.PI/2; roomG.add(dw); })();
+  prim(new T.BoxGeometry(16, 22, 130), mk('#9aa0a8', {roughness:0.35, metalness:0.7}), -2738, FLOOR_Y + 1000, -1640, roomG);
+  textPlane(1100, 300, function(c, W, H){
+    c.fillStyle = '#2a7f62'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = '700 150px "Noto Sans TC", sans-serif'; c.fillText('日間照顧中心', W/2, H*0.42);
+    c.font = '500 70px "Noto Sans TC", sans-serif'; c.fillText('歡迎光臨 · 09:00 – 16:00', W/2, H*0.8);
+  }, -2744, FLOOR_Y + 2400, -1300, Math.PI/2, roomG);
+  // reception counter beside the door
+  (function(){
+    var cg = new T.Group(); cg.position.set(-2350, FLOOR_Y, -250); roomG.add(cg);
+    ol(prim(new T.BoxGeometry(600, 1050, 1500), counterMat, 0, 525, 0, cg), 1.01);
+    prim(new T.BoxGeometry(720, 40, 1600), darkWood, 0, 1070, 0, cg);
+    prim(new T.BoxGeometry(560, 20, 1400), paleMat, 0, 1100, 0, cg);
+    textPlane(900, 260, function(c, W, H){
+      c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H); c.fillStyle = '#2a7f62'; c.fillRect(0, 0, 24, H);
+      c.fillStyle = '#1a1f26'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = '700 130px "Noto Sans TC", sans-serif'; c.fillText('服務台 · 報到', W/2, H*0.5);
+    }, 302, 640, 0, Math.PI/2, cg);
+    prim(new T.BoxGeometry(120, 60, 180), blackMat, 60, 1130, 400, cg);                       // sign-in tablet stand
+    prim(new T.CylinderGeometry(55, 45, 120, 16), mk('#e07b4f', {roughness:0.8}), -120, 1160, -520, cg);
+    prim(new T.SphereGeometry(110, 14, 10), mk(TOON ? '#4fc06a' : '#5f9a5a', {roughness:0.9}), -120, 1300, -520, cg);
+  })();
+  // cubby shelf for members' belongings
+  (function(){
+    var sg = new T.Group(); sg.position.set(-2580, FLOOR_Y, 1200); roomG.add(sg);
+    prim(new T.BoxGeometry(400, 1500, 1300), darkWood, 0, 750, 0, sg);
+    for (var r = 0; r < 4; r++) for (var cI = 0; cI < 3; cI++){
+      prim(new T.BoxGeometry(360, 300, 380), paleMat, 40, 200 + r * 360, -420 + cI * 420, sg);
+      if ((r + cI) % 3 === 0) prim(new T.BoxGeometry(200, 160, 260), mk(['#c96a5a','#5a7fc9','#d9b64a'][(r*3+cI) % 3], {roughness:0.8}), 120, 130 + r * 360, -420 + cI * 420, sg);
+    }
+  })();
+  // wall-mounted TV showing the morning exercise video
+  prim(new T.BoxGeometry(50, 760, 1300), blackMat, -2770, FLOOR_Y + 1750, 2000, roomG);
+  (function(){
+    var tv = textPlane(1220, 690, function(c, W, H){
+      var g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#9fd1f0'); g.addColorStop(1, '#e9f4d8'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+      c.fillStyle = '#2a7f62'; c.fillRect(0, 0, W, 90); c.fillStyle = '#ffffff'; c.font = '600 56px "Noto Sans TC", sans-serif'; c.textAlign = 'left'; c.textBaseline = 'middle';
+      c.fillText('早安健康操 · 第 3 節  手臂伸展', 30, 45);
+      c.strokeStyle = '#1a1f26'; c.lineWidth = 14; c.lineCap = 'round';
+      [[300, 1],[520, -1],[740, 1]].forEach(function(p){ var x = p[0], s = p[1];
+        c.beginPath(); c.arc(x, 220, 42, 0, Math.PI*2); c.stroke();
+        c.beginPath(); c.moveTo(x, 262); c.lineTo(x, 430); c.moveTo(x, 300); c.lineTo(x - 90*s, 190); c.moveTo(x, 300); c.lineTo(x + 90, 380); c.moveTo(x, 430); c.lineTo(x - 50, 560); c.moveTo(x, 430); c.lineTo(x + 50, 560); c.stroke(); });
+    }, -2742, FLOOR_Y + 1750, 2000, Math.PI/2, roomG);
+    tv.material = new T.MeshBasicMaterial({map: tv.material.map}); tv.material.toneMapped = false;
+  })();
+  // activity whiteboard with today's schedule, on the back wall right of the window
+  prim(new T.BoxGeometry(1360, 900, 24), mk('#c9ccd1', {roughness:0.4, metalness:0.5}), 2050, FLOOR_Y + 1350, -2470, roomG);
+  textPlane(1300, 840, function(c, W, H){
+    c.fillStyle = '#fbfbf9'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#1b4f8a'; c.font = '700 70px "Noto Sans TC", sans-serif'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText('今日活動', 50, 70);
+    c.font = '500 44px "Noto Sans TC", sans-serif'; c.fillStyle = '#5f6974'; c.fillText('10 月 28 日（二）', 420, 74);
+    c.strokeStyle = '#1b4f8a'; c.lineWidth = 4; c.beginPath(); c.moveTo(50, 120); c.lineTo(W - 50, 120); c.stroke();
+    var rows = [['09:00', '報到 · 量血壓'], ['09:30', '腦波量測（健保卡報到）'], ['10:30', '早安健康操'], ['11:30', '午餐 · 午休'], ['14:00', '懷舊音樂 · 手作'], ['15:30', '點心 · 返家']];
+    rows.forEach(function(r, i){
+      var y = 180 + i * 88; c.fillStyle = i === 1 ? '#d9352b' : '#1a1f26';
+      c.font = '600 46px "Barlow Semi Condensed", sans-serif'; c.fillText(r[0], 60, y);
+      c.font = (i === 1 ? '700 ' : '500 ') + '46px "Noto Sans TC", sans-serif'; c.fillText(r[1], 260, y);
+    });
+    c.fillStyle = '#d9352b'; c.beginPath(); c.arc(W - 120, 268, 16, 0, Math.PI*2); c.fill();
+  }, 2050, FLOOR_Y + 1350, -2456, 0, roomG);
+  // wall calendar beside the notice board
+  textPlane(420, 560, function(c, W, H){
+    c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H); c.fillStyle = '#d9352b'; c.fillRect(0, 0, W, H*0.22);
+    c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '700 120px "Barlow Semi Condensed", sans-serif'; c.fillText('OCT', W/2, H*0.11);
+    c.fillStyle = '#1a1f26'; c.font = '400 44px "Barlow Semi Condensed", sans-serif';
+    for (var i = 0; i < 31; i++){ var col = (i + 3) % 7, row = Math.floor((i + 3) / 7); c.fillStyle = (i === 27) ? '#d9352b' : (col === 0 || col === 6 ? '#8a94a0' : '#1a1f26'); c.fillText(String(i + 1), 60 + col * 150, H*0.3 + row * 150); }
+  }, -2450, FLOOR_Y + 1550, -2458, 0, roomG);
+  // round activity table with chairs
+  (function(){
+    var tg = new T.Group(); tg.position.set(2200, FLOOR_Y, -1300); roomG.add(tg);
+    ol(prim(new T.CylinderGeometry(560, 560, 36, 40), woodMat, 0, 732, 0, tg), 1.01);
+    prim(new T.CylinderGeometry(60, 60, 700, 16), mk('#8a8f96', {roughness:0.4, metalness:0.6}), 0, 350, 0, tg);
+    prim(new T.CylinderGeometry(320, 320, 30, 24), mk('#8a8f96', {roughness:0.4, metalness:0.6}), 0, 15, 0, tg);
+    [0.6, 2.6, 4.2].forEach(function(a){
+      if (!TOON && a === 4.2) return;                       // the volunteer figure brings her own chair in the realistic version
+      var cg = new T.Group(); cg.position.set(Math.sin(a) * 800, 0, Math.cos(a) * 800); cg.rotation.y = a + Math.PI; tg.add(cg);
+      var cm = mk(TOON ? '#f3a640' : '#b78a5e', {roughness:0.65});
+      prim(roundedBoxGeo(440, 36, 440, 30, 4), cm, 0, 420, 0, cg); prim(roundedBoxGeo(440, 460, 36, 20, 3), cm, 0, 450, -210, cg);
+      [[-190,-190],[190,-190],[-190,190],[190,190]].forEach(function(p){ prim(new T.CylinderGeometry(15, 15, 420, 12), cm, p[0], 210, p[1], cg); });
+    });
+    prim(new T.CylinderGeometry(70, 60, 90, 20), paleMat, 180, 795, -120, tg); prim(new T.CylinderGeometry(70, 60, 90, 20), paleMat, -220, 795, 160, tg);   // cups
+    prim(new T.BoxGeometry(300, 20, 220), mk('#e9e4d8', {roughness:0.9}), -40, 760, 60, tg);                                                               // craft paper
+  })();
+  // water dispenser in the corner by the door
+  prim(new T.BoxGeometry(320, 1000, 320), paleMat, -2580, FLOOR_Y + 500, -2250, roomG);
+  prim(new T.CylinderGeometry(120, 120, 380, 20), new T.MeshStandardMaterial({color:'#bfe3ff', roughness:0.1, transparent:true, opacity:0.7}), -2580, FLOOR_Y + 1190, -2250, roomG);
   // measurement table (top at y = 0)
   var woodMat = mk(TOON ? '#f3c98a' : '#c7a46f', {roughness:0.55});
   var tableTop = prim(roundedBoxGeo(1000, 30, 620, 40, 2), woodMat, -50, -30, -10, roomG); ol(tableTop, 1.015);
@@ -538,58 +641,67 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     }
     var skin = mk(o.skin, {roughness:0.62}), hair = mk(o.hair, {roughness:0.95}), top = mk(o.top, {roughness:0.92}), pants = mk(o.pants, {roughness:0.9});
     var shoe = mk('#2b2b2e', {roughness:0.7}), chairMat = mk(o.chair, {roughness:0.65}), glassesMat = mk('#3b3b3f', {roughness:0.4, metalness:0.3});
-    // chair
-    ol(prim(roundedBoxGeo(460, 40, 460, 30, 4), chairMat, 0, 410, 0, g), 1.02);
-    ol(prim(roundedBoxGeo(460, 480, 40, 20, 3), chairMat, 0, 450, -230, g), 1.02);
-    [[-200,-200],[200,-200],[-200,200],[200,200]].forEach(function(p){ prim(new T.CylinderGeometry(16, 16, 410, 12), chairMat, p[0], 205, p[1], g); });
+    var upper = new T.Group(); upper.position.y = o.standing ? 400 : 0; g.add(upper);   // torso, arms and head sit 400 mm higher when standing
+    if (!o.standing && o.chair !== false){
+      ol(prim(roundedBoxGeo(460, 40, 460, 30, 4), chairMat, 0, 410, 0, g), 1.02);
+      ol(prim(roundedBoxGeo(460, 480, 40, 20, 3), chairMat, 0, 450, -230, g), 1.02);
+      [[-200,-200],[200,-200],[-200,200],[200,200]].forEach(function(p){ prim(new T.CylinderGeometry(16, 16, 410, 12), chairMat, p[0], 205, p[1], g); });
+    }
     // legs (seated), shoes
     [-1,1].forEach(function(s){
-      limb([s*95, 500, -110], [s*95, 520, 300], 70*W, pants, g);
-      limb([s*95, 500, 300], [s*95, 70, 310], 56*W, pants, g);
-      ol(prim(new T.BoxGeometry(110*W, 60, 250), shoe, s*95, 30, 380, g));
+      if (o.standing){
+        limb([s*95, 900, -40], [s*95, 480, -20], 70*W, pants, g);
+        limb([s*95, 480, -20], [s*95, 70, 0], 56*W, pants, g);
+        ol(prim(new T.BoxGeometry(110*W, 60, 250), shoe, s*95, 30, 60, g));
+      } else {
+        limb([s*95, 500, -110], [s*95, 520, 300], 70*W, pants, g);
+        limb([s*95, 500, 300], [s*95, 70, 310], 56*W, pants, g);
+        ol(prim(new T.BoxGeometry(110*W, 60, 250), shoe, s*95, 30, 380, g));
+      }
     });
     // torso
-    var torso = prim(roundedBoxGeo(400*W, 540, 230*W, 110, 40), top, 0, 500, -120, g); ol(torso, 1.03);
-    prim(new T.BoxGeometry(110*W, 300, 14), mk(o.shirt || '#f2eee6', {roughness:0.9}), 0, 880, -120 + 116*W, g);           // shirt showing in the cardigan opening
+    var torso = prim(roundedBoxGeo(400*W, 540, 230*W, 110, 40), top, 0, 500, -120, upper); ol(torso, 1.03);
+    prim(new T.BoxGeometry(110*W, 300, 14), mk(o.shirt || '#f2eee6', {roughness:0.9}), 0, 880, -120 + 116*W, upper);           // shirt showing in the cardigan opening
     [-1, 1].forEach(function(s){                                                                                            // cardigan collar / lapels
-      var lapel = prim(new T.BoxGeometry(16, 230, 22), top, s*62*W, 905, -120 + 118*W, g); lapel.rotation.z = s*0.22;
+      var lapel = prim(new T.BoxGeometry(16, 230, 22), top, s*62*W, 905, -120 + 118*W, upper); lapel.rotation.z = s*0.22;
     });
-    [1, 2, 3].forEach(function(i){ prim(new T.SphereGeometry(9, 10, 8), mk('#5a4a3a'), 60*W, 560 + i*100, -120 + 124*W, g); });
+    [1, 2, 3].forEach(function(i){ prim(new T.SphereGeometry(9, 10, 8), mk('#5a4a3a'), 60*W, 560 + i*100, -120 + 124*W, upper); });
     // arms resting on the table edge
     [-1,1].forEach(function(s){
-      limb([s*215*W, 1010, -110], [s*245*W, 790, 20], 48*W, top, g);
-      limb([s*245*W, 790, 20], [s*200*W, 775, 330], 42*W, top, g);
-      var hand = prim(new T.SphereGeometry(46*W, 18, 14), skin, s*200*W, 776, 365, g); hand.scale.set(1, 0.6, 1.3); ol(hand);
+      limb([s*215*W, 1010, -110], [s*245*W, 790, 20], 48*W, top, upper);
+      limb([s*245*W, 790, 20], [s*200*W, 775, 330], 42*W, top, upper);
+      var hand = prim(new T.SphereGeometry(46*W, 18, 14), skin, s*200*W, 776, 365, upper); hand.scale.set(1, 0.6, 1.3); ol(hand);
     });
     // neck and head
-    prim(new T.CylinderGeometry(50*HS, 56*HS, 100, 18), skin, 0, 1070, -100, g);
+    prim(new T.CylinderGeometry(50*HS, 56*HS, 100, 18), skin, 0, 1070, -100, upper);
     var hy = 1120 + 105*HS, hz = -90;
-    var head = prim(new T.SphereGeometry(1, 36, 28), skin, 0, hy, hz, g); head.scale.set(88*HS, 105*HS, 74*HS); ol(head, 1.035);
-    [-1,1].forEach(function(s){ var e = prim(new T.SphereGeometry(20*HS, 16, 12), skin, s*86*HS, hy - 4*HS, hz - 6*HS, g); e.scale.set(0.6, 1, 0.8); });
-    var cap = new T.Mesh(new T.SphereGeometry(1, 36, 20, 0, Math.PI*2, 0, Math.PI*0.56), hair); cap.scale.set(92*HS, 108*HS, 79*HS); cap.position.set(0, hy + 2*HS, hz - 6*HS); cap.rotation.x = -0.3; cap.castShadow = true; g.add(cap);
+    var head = prim(new T.SphereGeometry(1, 36, 28), skin, 0, hy, hz, upper); head.scale.set(88*HS, 105*HS, 74*HS); ol(head, 1.035);
+    [-1,1].forEach(function(s){ var e = prim(new T.SphereGeometry(20*HS, 16, 12), skin, s*86*HS, hy - 4*HS, hz - 6*HS, upper); e.scale.set(0.6, 1, 0.8); });
+    var cap = new T.Mesh(new T.SphereGeometry(1, 36, 20, 0, Math.PI*2, 0, Math.PI*0.56), hair); cap.scale.set(92*HS, 108*HS, 79*HS); cap.position.set(0, hy + 2*HS, hz - 6*HS); cap.rotation.x = -0.3; cap.castShadow = true; upper.add(cap);
     var ez = hz + 70*HS;
     [-1,1].forEach(function(s){
       var ex = s*32*HS, ey = hy + 8*HS;
-      var w = prim(new T.SphereGeometry(TOON ? 16*HS : 12*HS, 18, 14), mk('#ffffff', {roughness:0.3}), ex, ey, ez, g); w.scale.z = 0.55; w.castShadow = false;
-      var ir = prim(new T.SphereGeometry(TOON ? 9*HS : 6*HS, 16, 12), mk('#2e2420', {roughness:0.3}), ex, ey, ez + (TOON ? 7 : 5)*HS, g); ir.castShadow = false;
-      if (TOON){ var hl = new T.Mesh(new T.SphereGeometry(3*HS, 8, 6), new T.MeshBasicMaterial({color:'#ffffff'})); hl.position.set(ex + 3*HS, ey + 3*HS, ez + 14*HS); g.add(hl); }
-      var br = prim(new T.BoxGeometry(30*HS, 5*HS, 6), hair, ex, ey + 26*HS, ez + 2*HS, g); br.rotation.z = s * -0.12; br.castShadow = false;
+      var w = prim(new T.SphereGeometry(TOON ? 16*HS : 12*HS, 18, 14), mk('#ffffff', {roughness:0.3}), ex, ey, ez, upper); w.scale.z = 0.55; w.castShadow = false;
+      var ir = prim(new T.SphereGeometry(TOON ? 9*HS : 6*HS, 16, 12), mk('#2e2420', {roughness:0.3}), ex, ey, ez + (TOON ? 7 : 5)*HS, upper); ir.castShadow = false;
+      if (TOON){ var hl = new T.Mesh(new T.SphereGeometry(3*HS, 8, 6), new T.MeshBasicMaterial({color:'#ffffff'})); hl.position.set(ex + 3*HS, ey + 3*HS, ez + 14*HS); upper.add(hl); }
+      var br = prim(new T.BoxGeometry(30*HS, 5*HS, 6), hair, ex, ey + 26*HS, ez + 2*HS, upper); br.rotation.z = s * -0.12; br.castShadow = false;
       if (o.glasses){
-        var ring = new T.Mesh(new T.TorusGeometry(19*HS, 1.8, 8, 32), glassesMat); ring.position.set(ex, ey, ez + 10*HS); g.add(ring);
-        var temple = new T.Mesh(new T.BoxGeometry(2.5, 2.5, 95*HS), glassesMat); temple.position.set(s*84*HS, ey + 2, ez - 42*HS); g.add(temple);
+        var ring = new T.Mesh(new T.TorusGeometry(19*HS, 1.8, 8, 32), glassesMat); ring.position.set(ex, ey, ez + 10*HS); upper.add(ring);
+        var temple = new T.Mesh(new T.BoxGeometry(2.5, 2.5, 95*HS), glassesMat); temple.position.set(s*84*HS, ey + 2, ez - 42*HS); upper.add(temple);
       }
     });
-    if (o.glasses){ var bridge = new T.Mesh(new T.BoxGeometry(26*HS, 2.5, 2.5), glassesMat); bridge.position.set(0, hy + 10*HS, ez + 10*HS); g.add(bridge); }
-    var nose = prim(new T.SphereGeometry(10*HS, 14, 10), skin, 0, hy - 10*HS, hz + 74*HS, g); nose.scale.set(0.8, 1.1, 1); nose.castShadow = false;
-    var mouth = new T.Mesh(new T.TorusGeometry(15*HS, TOON ? 3.5 : 2.4, 8, 20, Math.PI), mk('#9c5a5e', {roughness:0.6})); mouth.rotation.z = Math.PI; mouth.position.set(0, hy - 40*HS, hz + 66*HS); g.add(mouth);
+    if (o.glasses){ var bridge = new T.Mesh(new T.BoxGeometry(26*HS, 2.5, 2.5), glassesMat); bridge.position.set(0, hy + 10*HS, ez + 10*HS); upper.add(bridge); }
+    var nose = prim(new T.SphereGeometry(10*HS, 14, 10), skin, 0, hy - 10*HS, hz + 74*HS, upper); nose.scale.set(0.8, 1.1, 1); nose.castShadow = false;
+    var mouth = new T.Mesh(new T.TorusGeometry(15*HS, TOON ? 3.5 : 2.4, 8, 20, Math.PI), mk('#9c5a5e', {roughness:0.6})); mouth.rotation.z = Math.PI; mouth.position.set(0, hy - 40*HS, hz + 66*HS); upper.add(mouth);
     if (!TOON){   // cheek and brow lines read as age in the PBR version
-      [[-1, -26],[1, -26]].forEach(function(p){ var ln = new T.Mesh(new T.TorusGeometry(26*HS, 1.1, 6, 16, Math.PI*0.5), mk('#caa08a')); ln.position.set(p[0]*40*HS, hy + p[1]*HS, hz + 64*HS); ln.rotation.z = p[0] > 0 ? -Math.PI*0.2 : -Math.PI*1.3; g.add(ln); });
+      [[-1, -26],[1, -26]].forEach(function(p){ var ln = new T.Mesh(new T.TorusGeometry(26*HS, 1.1, 6, 16, Math.PI*0.5), mk('#caa08a')); ln.position.set(p[0]*40*HS, hy + p[1]*HS, hz + 64*HS); ln.rotation.z = p[0] > 0 ? -Math.PI*0.2 : -Math.PI*1.3; upper.add(ln); });
     }
     if (o.headband){
       o.headband.position.set(0, hy + 30*HS - 12.5, hz);
       o.headband.scale.setScalar(HS * 0.985);
-      g.add(o.headband);
+      upper.add(o.headband);
     }
+    if (o.tablet){ prim(new T.BoxGeometry(230, 160, 12), mk('#1d1f24', {roughness:0.4}), 0, 790, 360, upper).rotation.x = -0.9; }
     g.userData.headY = hy; g.userData.hs = HS;
     return g;
   }
@@ -839,13 +951,34 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     elderG.position.set(-790, FLOOR_Y, 0); elderG.rotation.y = Math.PI/2;
     elder2 = buildElder(scene, {hs:1.35, skin:'#f3c9ac', hair:'#e9e7e2', shirt:'#e8dcc8', top:'#ff7f7f', pants:'#6a4fa8', chair:'#f3a640', glasses:false});
     elder2.position.set(-1750, FLOOR_Y, -1950); elder2.rotation.y = 0.35;
+    // 居服員 (care worker) standing behind the participant with a tablet; two more members at the activity table
+    var carer = buildElder(scene, {hs:1.3, skin:'#f1c8a8', hair:'#3a2a22', top:'#2a9d8f', pants:'#2f5f8f', glasses:false, standing:true, tablet:true});
+    carer.position.set(-1250, FLOOR_Y, -700); carer.rotation.y = 0.34;
+    [[0.6, '#e36f6f', '#4b5a8f', '#d9d7d2'], [2.6, '#f0b23a', '#5a4b3f', '#efeeea']].forEach(function(e){
+      var m = buildElder(scene, {hs:1.35, skin:'#f5cfb2', hair:e[3], top:e[1], pants:e[2], chair:false, glasses:false});
+      m.position.set(2200 + Math.sin(e[0]) * 760, FLOOR_Y, -1300 + Math.cos(e[0]) * 760); m.rotation.y = e[0] + Math.PI;
+    });
   } else {
     // Rowan (older adult, seated, hands in lap) at the measurement table; Nora (older woman) standing at the window
     // model files sit next to the page; a build may inline them as data URIs (window.ASSET_ROWAN / ASSET_NORA) where files can't be served
     elderG = buildElder(scene, {glb: window.ASSET_ROWAN || 'assets/rowan.glb', chair:'#b78a5e', headband:headG, bandY:1272, bandZ:40, bandSX:0.87, bandSZ:1.41, headY:1240});
     elderG.position.set(-1000, FLOOR_Y, 0); elderG.rotation.y = Math.PI/2;
-    elder2 = buildElder(scene, {glb: window.ASSET_NORA || 'assets/nora.glb', headY:1500});
-    elder2.position.set(-1450, FLOOR_Y, -2000); elder2.rotation.y = Math.PI - 0.7;
+    // other CC0 figures: care worker with tablet behind the participant, a care worker steadying a member by the window,
+    // a member in a wheelchair with an attendant, two visitors at the activity table
+    var A = window.ASSETS || {};
+    function loadFigure(name, x, z, ry){
+      var g = new T.Group(); g.position.set(x, FLOOR_Y, z); g.rotation.y = ry; g.scale.setScalar(1000); scene.add(g);
+      if (T.GLTFLoader) new T.GLTFLoader().load(A[name] || ('assets/' + name + '.glb'), function(gltf){
+        gltf.scene.traverse(function(n){ if (n.isMesh){ n.castShadow = true; n.receiveShadow = true; if (n.material && n.material.map) n.material.map.anisotropy = 4; } });
+        g.add(gltf.scene);
+      });
+      return g;
+    }
+    elder2 = loadFigure('micah', -1250, -700, 0.34);          // 居服員，拿平板看量測
+    loadFigure('physio', -2000, -1650, 1.9);                   // 居服員攙扶長者散步
+    loadFigure('wheelchair', 3100, -1800, -0.9);              // 輪椅長者與陪伴者
+    loadFigure('cup', 2200 + Math.sin(0.6) * 800, -1300 + Math.cos(0.6) * 800, 0.6 + Math.PI);     // 活動桌：喝茶
+    loadFigure('taylor', 2200 + Math.sin(4.2) * 800, -1300 + Math.cos(4.2) * 800, 4.2 + Math.PI);  // 活動桌：志工（自帶椅子）
   }
   scene.updateMatrixWorld(true);
   var headWorld = headG.localToWorld(new T.Vector3(0, BAND_H/2, 0));
@@ -869,16 +1002,16 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 
   /* ---------- state ---------- */
   var focusDefs = {
-    all:    {target:[-250, 420, -500], dist:3100, theta:0.95, phi:1.27},
+    all:    {target:[500, 450, -800], dist:4600, theta:0.72, phi:1.22},
     elder:  {target:[TOON ? -760 : -960, 420, 0], dist:1500, theta:0.7, phi:1.22},
     head:   {target:[headWorld.x, headWorld.y + 10, headWorld.z], dist:430, theta:0.5, phi:1.2},
     tablet: {target:[-60, 55, -120],   dist:520,  theta:0.35, phi:1.15},
     reader: {target:[118, 8, 58],      dist:290,  theta:0.65, phi:1.02}
   };
   var st = {
-    theta: 0.95, phi: 1.27, dist: 3100,
-    tTheta: 0.95, tPhi: 1.27, tDist: 3100,
-    target: new T.Vector3(-250, 420, -500), tTarget: new T.Vector3(-250, 420, -500),
+    theta: 0.72, phi: 1.22, dist: 4600,
+    tTheta: 0.72, tPhi: 1.22, tDist: 4600,
+    target: new T.Vector3(500, 450, -800), tTarget: new T.Vector3(500, 450, -800),
     focus: 'all',
     explode: 0, tExplode: 0,
     card: 0, tCard: 0,

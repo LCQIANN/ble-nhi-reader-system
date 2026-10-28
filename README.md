@@ -37,4 +37,4 @@ https://claude.ai/artifact/S5hW3s3kvN6sxsTNieaWWV
 
 ## 素材來源
 
-- 日照中心寫實版的長者人物 `assets/rowan.glb`、`assets/nora.glb`：Innerscene 3D People（MakeHuman / MPFB 製作），公有領域 CC0。原檔已縮減貼圖以便網頁載入。
+- 日照中心寫實版的人物 `assets/*.glb`（Rowan 長者、Micah 居服員、Alex 與 Casey、Nora 與 Micah 輪椅組、Taylor、志工）：Innerscene 3D People（MakeHuman / MPFB 製作），公有領域 CC0。原檔已縮減貼圖以便網頁載入。
